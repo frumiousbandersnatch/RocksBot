@@ -24,6 +24,8 @@ use modules::PluginBaseClass;
 use JSON;
 use Data::Dumper;
 
+my $DB_ARTICLE_CACHE_SIZE = 250;
+
 
 sub getOutput {
     my $self = shift;
@@ -116,8 +118,8 @@ sub getOutput {
     $c_links->sort({field=>"sys_creation_timestamp", type=>'numeric', order=>'desc'});
     my @records = $c_links->matchRecords({val1=>$subreddit});
 
-    if (@records > 50){
-        for (my $i=50; $i<@records; $i++){
+    if (@records > $DB_ARTICLE_CACHE_SIZE){
+        for (my $i=$DB_ARTICLE_CACHE_SIZE; $i<@records; $i++){
             $c_links->delete($records[$i]->{row_id});
         }
     }

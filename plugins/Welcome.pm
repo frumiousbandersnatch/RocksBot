@@ -39,7 +39,7 @@ sub getOutput {
         $self->useChannelCookies();
 
         ## dont welcome people when they change hosts
-        return if ( ($self->cookie('last_welcome') || 8675309) > time() - $self->s('last_welcome_timeout'));
+        return if ($self->cookie('last_welcome') > time() - $self->s('last_welcome_timeout'));
     
         my @wchannels = split (/ /, $self->s('herald_channels'));
         
@@ -214,12 +214,12 @@ sub doRegexMatches{
     ## party party
     if ($options=~/^everybody dance now/i){
         $self->returnType("action");
-        return ("twerks");
+        return ("breakdances");
     }
 
     if ($options=~/^stop/i){
         $self->suppressNick("true");
-        return  BOLD.YELLOW."HAMMER TIME!".NORMAL;
+        return  BOLD.ORANGE."IN THE NAME OF LOVE!".NORMAL;
     }
         
     if ($options=~/i love $self->{BotName}/i){
@@ -245,7 +245,7 @@ sub settings{
 
     $self->defineSetting({
         name=>'herald_channels',
-        default=>'',
+        default=>'#soberfriends #stopdrinking #stopdrinkingsocial',
         desc=>'A space separated list of channels that the herald should operate in.  If a channel is not listed here, the herald will not welcome users in that channel.'
     });
 

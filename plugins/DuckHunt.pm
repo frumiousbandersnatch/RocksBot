@@ -25,9 +25,18 @@ use base qw (modules::PluginBaseClass);
 use modules::PluginBaseClass;
 use Data::Dumper;
 
-use constant DUCK => '\_o<';
+use constant DUCK  => '(o)<  ・゜゜・。。・゜゜HONK';
+use constant PIG   => '~~(_ _)^: OINK';
+use constant SEAL  => '(ᵔᴥᵔ) BARK';
+use constant MOUSE => '<:3)~ SQUEAK';
+#use constant BEAR  => "('')-.-('') GRUNT";
+#use constant FOX   => "< '!' > Hatee-hatee-hatee-ho!";
+#use constant SHARK => '____/\_______\o/___ AHHHH SHARK'; #reverse score
 
-my $testing;    #launch ducks every 8 seconds
+
+
+
+my $testing;    #launch animals every 8 seconds
 
 sub plugin_init{
     my $self = shift;
@@ -52,6 +61,34 @@ sub getOutput {
     #
 
     if ($cmd eq 'bang'){
+        
+        return "You can't do that via PM. Sorry, bud." if ($channel!~/^#/);
+
+        if (!$self->globalCookie("hunt_on")){
+            return "A game is not currently in progress.";
+        }
+
+        if (!$self->globalCookie("duck_launched")){
+            $self->returnType("irc_yield");
+            #$self->yieldCommand('kick');
+            $self->yieldArgs([$self->{channel}, $nick, "There was no goose!"]);
+            return "There was no " . $self->globalCookie("animal_launched") . ", you fool!";
+        }
+        $self->globalCookie("duck_launched", 0);
+
+        # shoot this duck
+        my $ducks = $self->cookie("num_ducks");
+        $ducks--;
+        $self->cookie("num_ducks", $ducks);
+
+        # schedule next duck
+        $self->scheduleDuck();
+
+        return "You have shot " . abs($ducks) . " animals in $self->{channel}";
+    }
+    
+    if ( ($cmd eq 'bef') || ($cmd eq 'befriend') ) {
+        
         return "You can't do that via PM. Sorry, bud." if ($channel!~/^#/);
 
         if (!$self->globalCookie("hunt_on")){
@@ -60,21 +97,23 @@ sub getOutput {
 
         if (!$self->globalCookie("duck_launched")){
             $self->returnType("irc_yield");
-            $self->yieldCommand('kick');
-            $self->yieldArgs([$self->{channel}, $nick, "There was no duck! You shot yourself right out of the channel!"]);
-            return "There was no duck, you fool!";
+            #$self->yieldCommand('kick');
+            $self->yieldArgs([$self->{channel}, $nick, "There was no goose!"]);
+            return "There was no " . $self->globalCookie("animal_launched") . "!";
         }
         $self->globalCookie("duck_launched", 0);
 
-        # shoot this duck
+        # friend this duck
         my $ducks = $self->cookie("num_ducks");
         $ducks++;
         $self->cookie("num_ducks", $ducks);
 
         # schedule next duck
         $self->scheduleDuck();
-
-        return "Nice shot! You have shot $ducks ducks in $self->{channel}";
+        
+        return "Nice work, you saved a " . $self->globalCookie("animal_launched") . ". You have saved $ducks animals in $self->{channel}";
+            
+            
     }
     
 
@@ -125,7 +164,36 @@ sub getOutput {
 
         $self->suppressNick("true");    
         $self->globalCookie("duck_launched", 1);
-        return $self->DUCK;
+        my $rand = int(rand(20)); 
+        print "Random animal number $rand\n";
+        
+        if ( $rand >= 18 ) {
+            
+            $self->globalCookie("animal_launched", "seal");
+            
+            return BOLD . $self->SEAL . NORMAL;
+                
+        } elsif ( $rand >= 15 ) {
+                
+            $self->globalCookie("animal_launched", "pig");
+                
+            return BROWN . $self->PIG . NORMAL;
+                
+        } elsif ( $rand >= 12 ) {
+                
+            $self->globalCookie("animal_launched", "mouse");
+                
+            return BROWN . $self->MOUSE . NORMAL;
+                
+        } else {
+            
+            $self->globalCookie("animal_launched", "goose");
+            
+            return BROWN . $self->DUCK . NORMAL;
+            
+        }
+        
+        
     }
 
 
@@ -145,7 +213,7 @@ sub getOutput {
 
         my $list = $self->getList();
         if ($list){
-            $output = BOLD."DuckHunt Scores for $self->{channel}: ".NORMAL . $list;
+            $output = BOLD."Hunt Scores for $self->{channel}: ".NORMAL . $list;
         }else{
             $output = 'No one has shot any ducks in '.$self->{channel}.' yet.';
         }
@@ -173,7 +241,7 @@ sub scheduleDuck{
         $next_time = time() + int(rand($self->s('duck_window'))) + $self->s('duck_delay');
     }
 
-    print "now is " . time() . " next duck at " . $next_time . " which is in " . ($next_time - time ()) . " seconds\n";
+    print "now is " . time() . " next goose at " . $next_time . " which is in " . ($next_time - time ()) . " seconds\n";
 
     my $args = {
       timestamp => $next_time,  
@@ -190,11 +258,13 @@ sub scheduleDuck{
 sub listeners{
     my $self = shift;
     
-    my @commands = [qw(bang clear_scores _launchduck start stop scores)];
+    my @commands = [qw(bang bef befriend clear_scores _launchduck start stop scores)];
 
     my $default_permissions =[
         {command=>"_launchduck", require_group => UA_INTERNAL },
         {command=>"clear_scores", require_group => UA_TRUSTED},
+        {command=>"start", require_group => UA_TRUSTED},
+        {command=>"stop", require_group => UA_TRUSTED},
     ];
 
     return { commands=>@commands,
@@ -220,8 +290,10 @@ sub settings{
 
 sub addHelp{
     my $self = shift;
-    $self->addHelpItem("[plugin_description]", "Duck Hunt!");
-   $self->addHelpItem("[bang]", "Command: bang.  Shoot a duck");
+    $self->addHelpItem("[plugin_description]", "Goose Game");
+   $self->addHelpItem("[bang]", "Command: bang.  Shoot a goose");
+   $self->addHelpItem("[bef]", "Command: BEFriend.  Save a goose");
+   $self->addHelpItem("[befriend]", "Command: BEFriend.  Save a goose");
    $self->addHelpItem("[clear_scores]", "clear the duck hunting scores");
 }
 1;
