@@ -12,7 +12,6 @@ package plugins::UrbanDictionary;
 #    but WITHOUT ANY WARRANTY; without even the implied warranty of
 #    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #    GNU General Public License for more details.
-#
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
@@ -23,6 +22,7 @@ use base qw (modules::PluginBaseClass);
 use modules::PluginBaseClass;
 use Data::Dumper;
 use URI::Escape;
+use JSON;
 
 sub onBotStart{
     my $self = shift;
@@ -46,7 +46,6 @@ sub getOutput {
     my $nick = $self->{nick};               
     my $output = "";
     my $url;
-    my $page;
     my $word;
 
     if ($cmd eq 'udquiz'){
@@ -192,37 +191,37 @@ sub getOutput {
             #return $self->help($cmd) if ($self->numFlags());
         }
 
-        $url = "http://www.urbandictionary.com/random.php";
-        $page = $self->getPage($url);
-        $page=~/<meta content=["|'](.+?)["|'] property='og:title'>/;
-        $word = $1;
+        $url = "http://api.urbandictionary.com/v0/random"; 
 
     }else{
         return $self->help($cmd) if (!$options);
-        $url = "http://www.urbandictionary.com/define.php?term=" . uri_escape($options);
-        $page = $self->getPage($url);
-        $word = $options;
+        $url = "http://api.urbandictionary.com/v0/define?term=" . uri_escape($options);
     }
 
-    $page=~ tr/\015//d;
+    my $page = $self->getPage($url);
+    my $json  = JSON->new->allow_nonref;
+    my $j;
+
+    eval { $j=$json->decode($page); };
+    return "Error contacting Urban Dictionary" if ($@);
 
     my @defs;
 
-    while ($page=~m#<div class='definition'>(.+?)\n#gis){
-        my $def = $1;
-        my $example;
+    foreach my $entry (@{$j->{list}}){
+        my $def = $entry->{definition};
+        my $example = $entry->{example};
+        my $word = $entry->{word};
+        my $author= $entry->{author};
+        my $permalink = $entry->{permalink};
+        my $ups = $entry->{thumbs_up};
+        my $downs = $entry->{thumbs_down};
 
-        if ($page=~m#<div class='example'>(.+?)\n#gis){
-            $example = $1;      
-            $example=~s/<br\/?>/ /gis;
-            $example=~s/<.+?>//gis;
-            $example=~s/\n//g;        
-        }
-    
-        $def=~s/<br\/?>/ /gis;
-        $def=~s/<.+?>//gis;
-        $def=~s/\n//g;
-        push @defs, {def=>$def, example=>$example};
+        $example =~s/\n/ /g;
+        $example =~s/\r//g;
+        $def=~s/\n/ /g;
+        $def=~s/\r//g;
+        
+        push @defs, {word=>$word, def=>$def, example=>$example, author=>$author, ups=>$ups, downs=>$downs, permalink=>$permalink};
     }
 
     my $def_num;
@@ -238,6 +237,7 @@ sub getOutput {
 
 
     if ($cmd eq 'udquiz'){
+        my $word  = $defs[0]->{word};
         $self->globalCookie("last_word", $word);
 
         my $def;
@@ -274,9 +274,9 @@ sub getOutput {
         ## Word lookup
 
         if (@defs){
-            $output = "UrbanDictionary.com on ".BOLD.$word.NORMAL.". [".($def_num+1)."/".(@defs)."] ".BLUE."Definition:".NORMAL." $defs[$def_num]->{def}  ".BLUE."Example:".NORMAL." $defs[$def_num]->{example}";
+            $output = "UrbanDictionary.com on ".BOLD.$defs[$def_num]->{word}.NORMAL.". [".($def_num+1)."/".(@defs)."] ".BLUE."Definition:".NORMAL." $defs[$def_num]->{def}  ".BLUE."Example:".NORMAL." $defs[$def_num]->{example} ".BLUE."Author: ".NORMAL.$defs[$def_num]->{author}.BLUE.' Score:'.NORMAL. '(+'.$defs[$def_num]->{ups}.'/-'.$defs[$def_num]->{downs}.") ".$self->getShortURL($defs[$def_num]->{permalink});
         }else{
-            $output = "No hip definitions found for \"$word\"";
+            $output = "No hip definitions found for \"$options\"";
         }
     }
         return $output;
@@ -371,3 +371,4 @@ sub addHelp{
 }
 1;
 __END__
+

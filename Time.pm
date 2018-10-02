@@ -282,7 +282,9 @@ sub getOutput {
         my $remainder = time() % 1753200;
         my $raels = $quads * 4;
         my $extraraels = int($remainder / 432000);
-
+	my $yi1 = int(3 - $extraraels);
+	my $yi2 = int(1728000 - $remainder);
+## 1728000 sec = 7 hours
         if ($extraraels != 4){
             if (@records){
                 $self->returnType("reloadPlugins");
@@ -291,7 +293,7 @@ sub getOutput {
                 }
             }
 
-            return "Not yet..."
+            return "Not yet...$yi2 seconds to go"
         }
 
         if (!@records){

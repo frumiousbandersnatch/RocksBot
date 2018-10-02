@@ -75,7 +75,7 @@ sub getOutput {
 		# schedule next duck
 		$self->scheduleDuck();
 
-		return "You shot a goose! You monster! You lose a point.";
+		return "You shot a goose! You monster! You lose a point. Score: $ducks";
 	}
 	if ($cmd eq 'befriend'){
 		
@@ -162,7 +162,7 @@ sub getOutput {
 	# scores	
 	#
 
-	if ($cmd eq 'scores'){
+	if ($cmd eq 'friends'){
 		my @cookies = $self->allCookies();
 		@cookies = sort {$b->{value} <=> $a->{value}} @cookies;
 		#print Dumper (@cookies);
@@ -174,13 +174,33 @@ sub getOutput {
 
 		my $list = $self->getList();
 		if ($list){
-			$output = BOLD."GooseHunt Scores for $self->{channel}: ".NORMAL . $list;
+			$output = BOLD."Goose Friend Scores for $self->{channel}: ".NORMAL . $list;
 }else{
 			$output = NORMAL."No one has befriended any geese in $self->{channel} yet.";
 		}
 		return $output;
 	}
+#
+#  monster scores!
+#
+    if ($cmd eq 'monsters'){
+        my @cookies = $self->allCookies();
+        @cookies = sort {$a->{value} <=> $b->{value}} @cookies;
+        #print Dumper (@cookies);
 
+        foreach my $cookie (@cookies){
+            next if ($cookie->{owner} eq ':package');
+            $self->addToList("$cookie->{owner}: $cookie->{value}", $self->BULLET );
+        }
+
+        my $list = $self->getList();
+        if ($list){
+            $output = BOLD."Goose Killer Scores for $self->{channel}: ".NORMAL . $list;
+}else{
+            $output = NORMAL."No one has killed any geese in $self->{channel} yet.";
+        }
+        return $output;
+    }
 	#
 	#	clear_scores
 	#
@@ -219,11 +239,12 @@ sub scheduleDuck{
 sub listeners{
 	my $self = shift;
 	
-	my @commands = [qw(bang befriend launched clear_scores _launchduck start stop scores)];
+	my @commands = [qw(bang befriend launched clear_scores _launchduck start stop friends monsters)];
 
 	my $default_permissions =[
 		{command=>"_launchduck", require_group => UA_INTERNAL },
 		{command=>"clear_scores", require_group => UA_TRUSTED},
+		{command=>"start", require_group => UA_TRUSTED},
 	];
 
 	return { commands=>@commands,
@@ -236,7 +257,7 @@ sub settings{
 
 	$self->defineSetting({
 		name=>'goose_delay', 
-		default=>60*5,
+		default=>60*12,
 		desc=>'The minimum time (in seconds) until the next duck appears.'
 	});
 

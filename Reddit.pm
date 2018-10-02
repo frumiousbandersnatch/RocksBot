@@ -1,4 +1,4 @@
-package plugins::Convert;
+package plugins::Reddit;
 #---------------------------------------------------------------------------
 #    Copyright (C) 2013  egretsareherons@gmail.com
 #    https://github.com/egretsareherons/RocksBot
@@ -16,57 +16,63 @@ package plugins::Convert;
 #    You should have received a copy of the GNU General Public License
 #    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #-----------------------------------------------------------------------------
+
 use strict;         
 use warnings;
 use base qw (modules::PluginBaseClass);
 use modules::PluginBaseClass;
+use JSON;
 use Data::Dumper;
+
 
 sub getOutput {
     my $self = shift;
     my $cmd = $self->{command};         # the command
     my $options = $self->{options};     # everything else on the line
-    my $channel = $self->{channel};                 
-    my $mask = $self->{mask};               # the users hostmask, not including the username
     my $nick = $self->{nick};               
-    my $output;
+    my @output;
 
-    return ($self->help($cmd)) if ($options eq '');
-   
-    #convert "http://www.google.com/ig/calculator?hl=en&q=1USD=?EUR";
-    #query "http://www.google.com/ig/calculator?hl=en&q=4*4";
-    my $url = "http://www.google.com/ig/calculator?hl=en&q=";
-    
-    if ($cmd eq 'calc'){
-        $url = $url . "$options";
-        my $page=$self->getPage($url);
 
-        print $page;
-        if ($page=~/lhs: "(.+?)",rhs:\s*"(.+?)"/){
-            $output = "$1 = $2";
-        }else{
-            $output = "Error";
+    if ($cmd eq 'subscribers'){
+
+        return $self->help($cmd) if (!$options);
+
+        my $subreddit = $options;
+    ## Get the json
+    my $page = $self->getPage("http://www.reddit.com/r/$subreddit/about.json");
+
+    my $json_o  = JSON->new->allow_nonref;
+    $json_o = $json_o->pretty(1);
+    my $j;
+
+        eval{
+            $j = $json_o->decode($page);
+        };
+
+        if ($@){
+            return "Couldn't find that subreddit.";
         }
 
-        return $output;
-    }
-    
+        return "r/$subreddit has $j->{data}->{subscribers} subscribers, of which $j->{data}->{accounts_active} recently visited.";
+
+   }
 }
 
 
 sub listeners{
     my $self = shift;
     
-    my @commands = [qw(convert calc)];
+    my @commands = [qw(subscribers)];
 
-    ## Values: irc_join
     my @irc_events = [qw () ];
 
     my @preg_matches = [qw () ];
 
-    my $default_permissions =[ ];
+    my $default_permissions =[
+    ];
 
-    return {commands=>@commands, permissions=>$default_permissions, irc_events=>@irc_events, preg_matches=>@preg_matches};
+    return {commands=>@commands, permissions=>$default_permissions, 
+        irc_events=>@irc_events, preg_matches=>@preg_matches};
 
 }
 
@@ -76,8 +82,8 @@ sub listeners{
 ##
 sub addHelp{
     my $self = shift;
-    $self->addHelpItem("[plugin_description]", "Google Calculator interface.");
-   $self->addHelpItem("[calc]", "Usage: calc <something>");
+    $self->addHelpItem("[plugin_description]", "Reddit stuff");
+   $self->addHelpItem("[subscribers]", "Usage: subscribers <subreddit>. Get the number of subscribers to a particular subreddit.");
 }
 1;
 __END__
