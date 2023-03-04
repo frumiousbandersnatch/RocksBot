@@ -117,6 +117,18 @@ sub getOutput {
 
 
     if ($cmd eq 'seen'){
+        if ($self->hasFlag('random')){
+            $self->{dbh} = DBI->connect("dbi:SQLite:dbname=".$self->{BotDatabaseFile}, "", "", { AutoCommit => 0 });
+            my $sql = "select * from collections where module_name = 'Seen' and collection_name not like ':%' and val1 = '$channel' order by RANDOM() limit 1";
+            my $sth = $self->{dbh}->prepare($sql);
+            $sth->execute();
+            $self->{dbh}->commit;
+            my $row = $sth->fetch;
+            my $date = $row->[4] || $row->[3];
+            
+            return "rand-o-seen: I last saw ".$row->[1] ." in ".$row->[5]." on $date saying \"".$row->[6]."\".";
+        }
+
         return $self->help($cmd) if ($options eq '');
         my $c = $self->getCollection(__PACKAGE__, $options);
         my @records = $c->matchRecords({val1=>$channel});
@@ -174,8 +186,7 @@ sub getOutput {
         ##       scratch that. because Is matches too.  that's why not.
         $options =~s/$self->{BotName}, tell //gis;
 
-        $options=~s/^(.+?) //gis;
-        $self->{options_unparsed}=~s/^(.+?)\s+//;
+        $options=~s/^(.+?)\b//gis;
         my $who = $1;
         my $what = $self->{options_unparsed};
 
@@ -246,10 +257,10 @@ sub getOutput {
     my @records = $c->matchRecords({val1=>$self->{channel}});
 
     if (@records){
-        $c->updateRecord($records[0]->{row_id}, {val2=>$options});
+        $c->updateRecord($records[0]->{row_id}, {val2=>$options, val3=>$mask});
 
     }else{
-        $c->add($self->{channel}, $options);
+        $c->add($self->{channel}, $options, $mask);
     }
 
 
@@ -259,11 +270,21 @@ sub getOutput {
 
     #Seen|:tell|1:who|2:what|3:nick
     $c = $self->getCollection(__PACKAGE__, ":tell");
-    @records=$c->matchRecords({val1=>$self->{nick}});
+    #@records=$c->matchRecords({val1=>$self->{nick}});
 
-    if (@records){
+    # hack to make this case insensitive
+    my @allrecords = $c->getAllRecords();
+    my @matchrecords;
+
+    foreach my $rec (@allrecords){
+        if (uc($rec->{val1}) eq uc($self->{nick})){
+            push @matchrecords, $rec;
+        }
+    }
+
+    if (@matchrecords){
         my @ret;
-        foreach my $rec (@records){
+        foreach my $rec (@matchrecords){
             push @ret, "$nick: <$rec->{val3}> $rec->{val2} (Sent at $rec->{sys_creation_date})";
             $c->delete($rec->{row_id});
         }
@@ -299,6 +320,7 @@ sub listeners{
 
     my $default_permissions =[ 
         {command=>"seendb", flag=>'cleardatabase', require_group=>UA_ADMIN},
+        {command=>"seen", flag=>'channel', require_group=>UA_ADMIN},
         {command=>"joins", require_group=>UA_ADMIN}
     ];
 
@@ -309,7 +331,7 @@ sub listeners{
 sub addHelp{
     my $self = shift;
     $self->addHelpItem("[plugin_description]", "Keeps track of when a nick was last seen in this channel. ");
-    $self->addHelpItem("[seen]", "Usage: seen <nick> [-channel=<#channel>].  Find out when a nick was last seen in this channel.");
+    $self->addHelpItem("[seen]", "Usage: seen <nick> [-channel=<#channel>].  Find out when a nick was last seen in this channel. Option: -random flag to see a random entry.");
     $self->addHelpItem("[seendb]", "Some stats about who's been seen.  Usage: seendb.  Available flags: -listusers,  -cleardatabase -publish");
     $self->addHelpItem("[seendb][-publish]", "publish the list to a temporary html page. Only applicable when used with -listusers.");
     $self->addHelpItem("[tell]", "Tell someone something. Use -list to see what I'm waiting to say to whom. Use -delete=<number> to delete. (soon: Use -pm to tell that person via PM, otherwise they'll be told in-channel.");

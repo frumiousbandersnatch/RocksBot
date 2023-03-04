@@ -45,16 +45,19 @@ sub getOutput {
         
         if ($self->{channel} ~~ @wchannels){
             my ($greeting, $type) = $self->getGreeting();
-
+    
+            my $prefix = BOLD ."Now announcing: ". NORMAL;
             if ($type eq 'action'){
                 $self->returnType("action");
+                $prefix = "";
 
             }elsif ($type eq 'command'){
                 $self->returnType("runBotCommand");
+                $prefix = "";
             }
 
             $self->cookie('last_welcome', time());
-            return $greeting;
+            return ($prefix . $greeting);
         }
 
         return;
@@ -237,7 +240,21 @@ sub doRegexMatches{
             return $action."s $target";
         }
     }
-}
+    if ($options=~/bot roll call/i){
+        my @replies =  ('Present',
+                        'Here',
+                        'Here',
+                        'Here',
+                        'At your service',
+                        $self->{BotName} . ", at your service",
+                        'Say my name',
+                        "I'm heeeeere",
+                        );
+        my @punc = ('!', '!!', '.', '.', '!', '!', '?');
+        my $reply = $replies[int(rand(@replies))] . $punc[int(rand(@punc))];
+        return $reply;
+    }
+}   
 
 
 sub settings{
@@ -272,6 +289,7 @@ sub listeners{
                         '/everybody dance now/i',
                         '/^stop\W*$/i',
                         "/^i love $self->{BotName}/i",
+                        "/bot roll call/i",
                         '/^(\w+) (\w+)\W*'.$self->{BotName}.'$/i',
                                 
     ];

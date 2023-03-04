@@ -147,7 +147,7 @@ sub getOutput {
         $options=~s/\?$//gis;
         
         if ($options!~/ or /){
-            my @choices = qw /yes yep no nope maybe perhaps/;
+            my @choices = qw /yes yep no nope yes nah perhaps/;
             return @choices[int(rand(@choices))];
         }
 
@@ -251,11 +251,11 @@ sub listeners{
 sub addHelp{
    my $self = shift;
    $self->addHelpItem("[plugin_description]", "Just some games. They may or may not be fun.");
-   $self->addHelpItem("[paper]", "Play Rock-Paper-Scissors-Lizard_Spock");
-   $self->addHelpItem("[rock]", "Play Rock-Paper-Scissors-Lizard_Spock");
-   $self->addHelpItem("[spock]", "Play Rock-Paper-Scissors-Lizard_Spock");
-   $self->addHelpItem("[lizard]", "Play Rock-Paper-Scissors-Lizard_Spock");
-   $self->addHelpItem("[scissors]", "Play Rock-Paper-Scissors-Lizard_Spock");
+   $self->addHelpItem("[paper]", "Play Rock-Paper-Scissors-Lizard-Spock");
+   $self->addHelpItem("[rock]", "Play Rock-Paper-Scissors-Lizard-Spock");
+   $self->addHelpItem("[spock]", "Play Rock-Paper-Scissors-Lizard-Spock");
+   $self->addHelpItem("[lizard]", "Play Rock-Paper-Scissors-Lizard-Spock");
+   $self->addHelpItem("[scissors]", "Play Rock-Paper-Scissors-Lizard-Spock");
    $self->addHelpItem("[8ball]", "Usage: 8ball <ask a question>");
    $self->addHelpItem("[fortune]", "Get a unix fortune, if fortune is installed on this machine.");
    $self->addHelpItem("[powerball]", "Have the bot pick some powerball numbers for you. Don't forget to share the winnings.");
